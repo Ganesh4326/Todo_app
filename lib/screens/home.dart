@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:my_first_app/constants/colors.dart';
+import 'package:my_first_app/data/database.dart';
 import 'package:my_first_app/widgets/todo_item.dart';
 
 import '../modal/todo.dart';
@@ -12,7 +14,12 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  final todosList = Todo.todoList();
+
+  final _myBox = Hive.openBox('mybox');
+
+  TodoDatabase db = TodoDatabase();
+
+  // final todosList = Todo.todoList();
 
   final _todoController = TextEditingController();
 
@@ -20,9 +27,17 @@ class _HomeState extends State<Home> {
 
 
   @override
-  void initState() {
-    foundTodo = todosList;
+  initState() {
+    foundTodo = db.todosList;
     print(foundTodo);
+
+    var todosList = _myBox.get("TODOSLIST");
+
+    if (foundTodo == null) {
+      db.createInitialData();
+    } else {
+      db.updateDataBase();
+    }
     super.initState();
   }
 
@@ -30,17 +45,19 @@ class _HomeState extends State<Home> {
     setState(() {
       todo.isDone = !todo.isDone;
     });
+    db.updateDataBase();
   }
 
   void _deleteTodoItem(String id) {
     setState(() {
-      todosList.removeWhere((element) => element.id == id);
+      db.todosList.removeWhere((element) => element.id == id);
     });
+    db.updateDataBase();
   }
 
   void _addTodoItem(String todo) {
     setState(() {
-      todosList.add(Todo(
+      db.todosList.add(Todo(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           todoText: todo));
     });
@@ -50,9 +67,9 @@ class _HomeState extends State<Home> {
   void _runFilter(String key) {
     List<Todo> results = [];
     if (key.isEmpty || key == '') {
-      results = todosList;
+      results = db.todosList;
     } else {
-      results = todosList
+      results = db.todosList
           .where((element) =>
               element.todoText!.toLowerCase().contains(key.toLowerCase()))
           .toList();
